@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Element Bond Builder</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-dark:      #050d14;
+    --bg-panel:     #0a1828;
+    --bg-card:      #0e2035;
+    --accent-cyan:  #00e5ff;
+    --accent-green: #00ff88;
+    --accent-gold:  #ffd700;
+    --accent-red:   #ff3b3b;
+    --text-primary: #e8f4fd;
+    --text-muted:   #7baec8;
+    --border:       rgba(0,229,255,0.18);
+    --glow-cyan:    0 0 18px rgba(0,229,255,0.55);
+    --radius:       14px;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg-dark);
+    color: var(--text-primary);
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  /* ── SCREENS ── */
+  .screen {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 20px;
+    transition: opacity .4s ease, transform .4s ease;
+    overflow-y: auto;
+  }
+  .screen.hidden { opacity: 0; pointer-events: none; transform: scale(.97); }
+  .screen.show   { opacity: 1; pointer-events: all;  transform: scale(1); }
+
+  /* ── HEX BG ── */
+  .hex-bg {
+    position: fixed; inset: 0; z-index: -1;
+    background:
+      radial-gradient(ellipse 60% 50% at 50% 20%, rgba(0,100,180,.18) 0%, transparent 70%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='70'%3E%3Cpolygon points='30,2 56,16 56,54 30,68 4,54 4,16' fill='none' stroke='rgba(0,180,220,0.07)' stroke-width='1'/%3E%3C/svg%3E") repeat;
+    background-size: auto, 60px 70px;
+  }
+
+  /* ── START SCREEN ── */
+  .start-hero {
+    width: 100%; max-width: 520px; height: 200px;
+    border-radius: var(--radius); overflow: hidden;
+    border: 1px solid var(--border); box-shadow: var(--glow-cyan); flex-shrink: 0;
+  }
+  .start-hero img { width: 100%; height: 100%; object-fit: cover; }
+
+  .game-title {
+    font-size: clamp(1.8rem,6vw,3rem); font-weight: 900; letter-spacing: 2px;
+    text-align: center;
+    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-green));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    margin: 18px 0 6px;
+    filter: drop-shadow(0 0 14px rgba(0,229,255,.4));
+  }
+  .game-subtitle {
+    color: var(--text-muted); font-size: clamp(.85rem,2.5vw,1rem);
+    text-align: center; margin-bottom: 26px; letter-spacing:.5px;
+  }
+  .start-btns { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 300px; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    padding: 14px 28px; border: none; border-radius: 50px; cursor: pointer;
+    font-size: clamp(.9rem,2.5vw,1rem); font-weight: 700;
+    letter-spacing: .5px; transition: all .2s ease; outline: none;
+  }
+  .btn-primary  { background: linear-gradient(135deg,#00b4d8,#00e5ff); color:#050d14; box-shadow: var(--glow-cyan); }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 28px rgba(0,229,255,.7); }
+  .btn-secondary{ background: transparent; border: 2px solid var(--accent-cyan); color: var(--accent-cyan); }
+  .btn-secondary:hover { background: rgba(0,229,255,.1); }
+  .btn-gold     { background: linear-gradient(135deg,#f39c12,#ffd700); color:#050d14; box-shadow: 0 0 18px rgba(255,215,0,.4); }
+
+  /* ── INSTRUCTIONS ── */
+  #instructScreen { justify-content: flex-start; padding-top: 20px; }
+  .instruct-wrap {
+    width: 100%; max-width: 720px;
+    background: var(--bg-panel); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 28px;
+    display: flex; flex-direction: column; gap: 24px;
+  }
+  .instruct-wrap h2 {
+    font-size: clamp(1.2rem,4vw,1.7rem);
+    background: linear-gradient(135deg,var(--accent-cyan),var(--accent-green));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .instruct-section h3 {
+    color: var(--accent-cyan); font-size: clamp(.9rem,2.5vw,1rem);
+    margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 6px;
+  }
+  .steps { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .steps li { display: flex; gap: 10px; align-items: flex-start; font-size: clamp(.8rem,2.2vw,.95rem); }
+  .step-num {
+    min-width:26px; height:26px; border-radius:50%;
+    background:var(--accent-cyan); color:#050d14;
+    font-weight:900; font-size:.8rem;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .valence-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(90px,1fr)); gap: 8px; }
+  .valence-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 6px; text-align: center; font-size:.82rem;
+  }
+  .valence-card .elem-sym  { font-size:1.3rem; font-weight:900; margin-bottom:4px; }
+  .valence-card .elem-name { color:var(--text-muted); font-size:.72rem; }
+  .valence-card .elem-bonds{ color:var(--accent-gold); font-weight:700; font-size:.82rem; margin-top:3px; }
+  .kbd-grid { display: flex; flex-direction: column; gap: 6px; }
+  .kbd-row  { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .kbd { background:var(--bg-card); border:1px solid var(--accent-cyan); color:var(--accent-cyan); border-radius:6px; padding:4px 10px; font-size:.82rem; font-weight:700; font-family:monospace; }
+  .kbd-desc { color:var(--text-muted); font-size:.82rem; }
+  .touch-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .touch-card { background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:12px; font-size:.82rem; color:var(--text-muted); }
+  .touch-card strong { color:var(--text-primary); display:block; margin-bottom:4px; }
+  .screenshot-placeholder { border:2px dashed var(--text-muted); border-radius:var(--radius); padding:36px 20px; text-align:center; color:var(--text-muted); }
+  .tips-list { list-style:none; display:flex; flex-direction:column; gap:8px; }
+  .tips-list li { display:flex; gap:8px; align-items:flex-start; font-size:clamp(.78rem,2vw,.88rem); color:var(--text-muted); }
+  .tip-icon { color:var(--accent-gold); flex-shrink:0; }
+
+  /* ── GAME SCREEN ── */
+  #gameScreen { padding:0; flex-direction:column; justify-content:flex-start; overflow:hidden; }
+
+  .hud {
+    width:100%; background:var(--bg-panel); border-bottom:1px solid var(--border);
+    padding:8px 16px; display:flex; align-items:center; gap:10px;
+    flex-wrap:wrap; flex-shrink:0; z-index:10;
+  }
+  .hud-item { display:flex; align-items:center; gap:5px; font-size:clamp(.75rem,2vw,.88rem); }
+  .hud-label { color:var(--text-muted); font-size:.75rem; }
+  .hud-val   { font-weight:700; color:var(--text-primary); }
+  .hud-divider { flex:1; }
+
+  .lives-wrap { display:flex; gap:4px; align-items:center; }
+  .life-icon { width:22px; height:22px; object-fit:contain; transition:all .3s; }
+  .life-icon.lost { opacity:.2; filter:grayscale(1); transform:scale(.85); }
+
+  .timer-bar-wrap { width:100%; height:5px; background:rgba(255,255,255,.08); flex-shrink:0; }
+  .timer-bar { height:100%; background:var(--accent-cyan); transition:width .1s linear, background .3s; }
+  .timer-bar.warn   { background:var(--accent-gold); }
+  .timer-bar.danger { background:var(--accent-red); }
+
+  .mol-hint { text-align:center; padding:4px 10px; color:var(--accent-gold); font-size:clamp(.78rem,2vw,.88rem); font-weight:600; flex-shrink:0; min-height:24px; }
+
+  #gameCanvas { display:block; flex:1; width:100%; cursor:crosshair; touch-action:none; }
+
+  .bond-counter { text-align:center; padding:3px 10px; color:var(--text-muted); font-size:.8rem; flex-shrink:0; }
+  .bond-counter span { color:var(--accent-cyan); font-weight:700; }
+
+  .mute-btn { background:rgba(0,229,255,.1); border:1px solid var(--border); color:var(--accent-cyan); border-radius:50%; width:34px; height:34px; cursor:pointer; font-size:1rem; display:flex; align-items:center; justify-content:center; transition:all .2s; flex-shrink:0; }
+  .mute-btn:hover { background:rgba(0,229,255,.2); }
+
+  .round-badge { background:rgba(0,0,0,.5); border:1px solid var(--border); border-radius:50px; padding:2px 10px; font-size:.75rem; color:var(--text-muted); }
+  .round-badge span { color:var(--accent-cyan); font-weight:700; }
+
+  .score-icon { width:18px; height:18px; object-fit:contain; }
+
+  .round-notif {
+    position:fixed; top:70px; left:50%; transform:translateX(-50%) translateY(-20px);
+    background:rgba(0,229,255,.15); border:1px solid var(--accent-cyan);
+    color:var(--accent-cyan); border-radius:50px; padding:6px 18px;
+    font-size:.82rem; font-weight:700; pointer-events:none; opacity:0;
+    transition:opacity .3s ease,transform .3s ease; z-index:100; white-space:nowrap;
+  }
+  .round-notif.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* ── END SCREEN ── */
+  .end-card {
+    background:var(--bg-panel); border:1px solid var(--border);
+    border-radius:var(--radius); padding:36px 32px;
+    max-width:440px; width:100%;
+    display:flex; flex-direction:column; align-items:center; gap:16px; text-align:center;
+  }
+  .end-icon { font-size:3.5rem; }
+  .end-title {
+    font-size:clamp(1.4rem,5vw,2rem); font-weight:900;
+    background:linear-gradient(135deg,var(--accent-cyan),var(--accent-green));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  }
+  .end-stats { display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%; }
+  .stat-box { background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:14px 10px; }
+  .stat-box .stat-val { font-size:1.6rem; font-weight:900; color:var(--accent-gold); }
+  .stat-box .stat-lbl { font-size:.75rem; color:var(--text-muted); margin-top:3px; }
+  .stat-box img { width:28px; height:28px; object-fit:contain; margin-bottom:4px; }
+  .end-btns { display:flex; flex-direction:column; gap:10px; width:100%; }
+
+  /* ── KBD HINT BAR ── */
+  .kbd-hint-bar {
+    position:fixed; bottom:0; left:0; right:0;
+    background:rgba(5,13,20,.9); border-top:1px solid var(--border);
+    padding:5px 16px; display:flex; gap:14px; flex-wrap:wrap;
+    font-size:.72rem; color:var(--text-muted); z-index:50; justify-content:center;
+  }
+  .kbd-hint-bar .kh { display:flex; align-items:center; gap:5px; }
+  .kbd-hint-bar .k  { background:var(--bg-card); border:1px solid var(--border); border-radius:4px; padding:1px 6px; font-family:monospace; font-size:.7rem; color:var(--text-primary); }
+
+  /* ── PARTICLES ── */
+  #particles { position:fixed; inset:0; pointer-events:none; z-index:200; overflow:hidden; }
+  .particle { position:absolute; border-radius:50%; pointer-events:none; animation:particleFly 1s ease-out forwards; }
+  @keyframes particleFly {
+    0%   { opacity:1; transform:translate(0,0) scale(1); }
+    100% { opacity:0; transform:translate(var(--dx),var(--dy)) scale(0); }
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width:480px) {
+    .instruct-wrap { padding:16px; gap:16px; }
+    .valence-grid  { grid-template-columns:repeat(3,1fr); }
+    .hud { padding:6px 10px; gap:6px; }
+    .end-card { padding:24px 16px; }
+    .touch-grid { grid-template-columns:1fr; }
+    .kbd-hint-bar { display:none; }
+  }
+  @media (min-width:900px) {
+    .hud,.timer-bar-wrap,.mol-hint,.bond-counter { max-width:860px; }
+    #gameCanvas { max-width:860px; }
+    #gameScreen { align-items:center; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hex-bg"></div>
+<div id="particles"></div>
+
+<!-- ══════════════ START SCREEN ══════════════ -->
+<div id="startScreen" class="screen show">
+  <div class="start-hero">
+    <img src="bonds.jpg" alt="Molecular bonds">
+  </div>
+  <h1 class="game-title">⚗️ Element Bond Builder</h1>
+  <p class="game-subtitle">Master covalent bonding · Secondary School Chemistry</p>
+  <div class="start-btns">
+    <button class="btn btn-primary"    onclick="startGame()">▶ &nbsp;Play Now</button>
+    <button class="btn btn-secondary"  onclick="showInstructions()">📖 &nbsp;How to Play</button>
+  </div>
+</div>
+
+<!-- ══════════════ INSTRUCTIONS SCREEN ══════════════ -->
+<div id="instructScreen" class="screen hidden">
+  <div class="instruct-wrap">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <h2>📖 How to Play</h2>
+      <button class="btn btn-secondary" style="padding:8px 20px;font-size:.85rem;" onclick="backToStart()">← Back</button>
+    </div>
+
+    <div class="instruct-section">
+      <h3>Step-by-Step Guide</h3>
+      <ol class="steps">
+        <li><span class="step-num">1</span><span>Look at the atoms on screen — each shows its element symbol and how many bonds it needs.</span></li>
+        <li><span class="step-num">2</span><span>Click or drag from one atom to another to create a covalent bond (shared electron pair).</span></li>
+        <li><span class="step-num">3</span><span>Follow valence rules: <b>H=1, O=2, N=3, C=4</b>. Never exceed an atom's valence!</span></li>
+        <li><span class="step-num">4</span><span>Complete the molecule by satisfying all atoms' valence requirements.</span></li>
+        <li><span class="step-num">5</span><span>The round ends when every atom glows green — all bonds correct!</span></li>
+      </ol>
+    </div>
+
+    <div class="instruct-section">
+      <h3>Valence Reference Table</h3>
+      <div class="valence-grid">
+        <div class="valence-card"><div class="elem-sym" style="color:#e8e8e8">H</div><div class="elem-name">Hydrogen</div><div class="elem-bonds">1 bond</div></div>
+        <div class="valence-card"><div class="elem-sym" style="color:#ff6b6b">O</div><div class="elem-name">Oxygen</div><div class="elem-bonds">2 bonds</div></div>
+        <div class="valence-card"><div class="elem-sym" style="color:#6baeff">N</div><div class="elem-name">Nitrogen</div><div class="elem-bonds">3 bonds</div></div>
+        <div class="valence-card"><div class="elem-sym" style="color:#aaa">C</div><div class="elem-name">Carbon</div><div class="elem-bonds">4 bonds</div></div>
+        <div class="valence-card"><div class="elem-sym" style="color:#5dde5d">Cl</div><div class="elem-name">Chlorine</div><div class="elem-bonds">1 bond</div></div>
+        <div class="valence-card"><div class="elem-sym" style="color:#5dde5d">F</div><div class="elem-name">Fluorine</div><div class="elem-bonds">1 bond</div></div>
+        <div class="valence-card"><div class="elem-sym" style="color:#e8c45a">S</div><div class="elem-name">Sulfur</div><div class="elem-bonds">2 bonds</div></div>
+        <div class="valence-card"><div class="elem-sym" style="color:#c98fff">P</div><div class="elem-name">Phosphorus</div><div class="elem-bonds">3 bonds</div></div>
+      </div>
+    </div>
+
+    <div class="instruct-section">
+      <h3>⌨️ Keyboard Controls (Desktop)</h3>
+      <div class="kbd-grid">
+        <div class="kbd-row"><span class="kbd">Click atom</span><span class="kbd-desc">→ Select atom</span></div>
+        <div class="kbd-row"><span class="kbd">Click 2nd atom</span><span class="kbd-desc">→ Create bond between them</span></div>
+        <div class="kbd-row"><span class="kbd">DELETE</span><span class="kbd">BACKSPACE</span><span class="kbd-desc">→ Remove selected bond</span></div>
+        <div class="kbd-row"><span class="kbd">R</span><span class="kbd-desc">→ Reset current round</span></div>
+        <div class="kbd-row"><span class="kbd">M</span><span class="kbd-desc">→ Mute / unmute music</span></div>
+        <div class="kbd-row"><span class="kbd">ESC</span><span class="kbd-desc">→ Cancel selection</span></div>
+      </div>
+    </div>
+
+    <div class="instruct-section">
+      <h3>👆 Touch Controls (Mobile / Tablet)</h3>
+      <div class="touch-grid">
+        <div class="touch-card"><strong>Drag to Bond</strong>Touch an atom and drag your finger to another atom to create a bond.</div>
+        <div class="touch-card"><strong>Remove a Bond</strong>Double-tap any existing bond line to remove it instantly.</div>
+        <div class="touch-card"><strong>Atom Highlight</strong>Valid targets glow cyan during a drag.</div>
+        <div class="touch-card"><strong>Green Glow</strong>Atoms turn green when their valence is fully satisfied!</div>
+      </div>
+    </div>
+
+    <div class="instruct-section">
+      <h3>📸 Gameplay Screenshot</h3>
+      <img src="gameplay.png" width="95%" height="95%">
+    </div>
+
+    <div class="instruct-section">
+      <h3>💡 Game Tips</h3>
+      <ul class="tips-list">
+        <li><span class="tip-icon">⚡</span><span>Each bond = 2 shared electrons between atoms.</span></li>
+        <li><span class="tip-icon">⚡</span><span>Count the valence electrons — atoms want a full outer shell (octet rule)!</span></li>
+        <li><span class="tip-icon">⚡</span><span>Oxygen needs 2 bonds — it forms water (H₂O), not HO!</span></li>
+        <li><span class="tip-icon">⚡</span><span>Carbon needs 4 bonds — it's the foundation of all organic chemistry.</span></li>
+        <li><span class="tip-icon">⚡</span><span>Lone pairs (unbonded electrons) are shown as dots on atoms — they don't form bonds.</span></li>
+        <li><span class="tip-icon">⚡</span><span>Double bonds (=) count as 2 bonds for each atom. Triple bonds (≡) count as 3.</span></li>
+      </ul>
+    </div>
+
+    <button class="btn btn-primary" onclick="startGame()" style="align-self:center;padding:14px 40px;">▶ &nbsp;Start Playing!</button>
+  </div>
+</div>
+
+<!-- ══════════════ GAME SCREEN ══════════════ -->
+<div id="gameScreen" class="screen hidden">
+  <div class="hud">
+    <div class="hud-item">
+      <div class="round-badge">Round <span id="hudRound">1</span>/10</div>
+    </div>
+    <div class="hud-item">
+      <img src="star.png" class="score-icon" alt="score">
+      <span class="hud-val" id="hudScore">0</span>
+    </div>
+    <div class="hud-item">
+      <div class="lives-wrap" id="livesWrap"></div>
+    </div>
+    <div class="hud-divider"></div>
+    <div class="hud-item">
+      <span class="hud-label">⏱</span>
+      <span class="hud-val" id="hudTimer">20</span>
+    </div>
+    <button class="mute-btn" id="muteBtn" onclick="toggleMute()" title="M = Mute/Unmute">🔊</button>
+  </div>
+
+  <div class="timer-bar-wrap">
+    <div class="timer-bar" id="timerBar" style="width:100%"></div>
+  </div>
+
+  <div class="mol-hint" id="molHint">Build H₂O — Water</div>
+  <canvas id="gameCanvas"></canvas>
+  <div class="bond-counter" id="bondCounter">Bonds: <span id="bondsMade">0</span> / <span id="bondsNeeded">0</span></div>
+
+  <div class="round-notif" id="roundNotif">New Molecule!</div>
+
+  <div class="kbd-hint-bar">
+    <div class="kh"><span class="k">Click</span> select atom</div>
+    <div class="kh"><span class="k">Click</span> 2nd atom → bond</div>
+    <div class="kh"><span class="k">DEL</span> remove bond</div>
+    <div class="kh"><span class="k">R</span> reset</div>
+    <div class="kh"><span class="k">M</span> mute</div>
+    <div class="kh"><span class="k">ESC</span> cancel</div>
+  </div>
+</div>
+
+<!-- ══════════════ END SCREEN ══════════════ -->
+<div id="endScreen" class="screen hidden">
+  <div class="end-card">
+    <div class="end-icon" id="endIcon">🎉</div>
+    <div class="end-title" id="endTitle">Well Done!</div>
+    <p id="endMsg" style="color:var(--text-muted);font-size:.9rem;"></p>
+    <div class="end-stats">
+      <div class="stat-box">
+        <img src="star.png" alt="score">
+        <div class="stat-val" id="finalScore">0</div>
+        <div class="stat-lbl">Final Score</div>
+      </div>
+      <div class="stat-box">
+        <div style="font-size:1.5rem;margin-bottom:4px">🧪</div>
+        <div class="stat-val" id="finalRounds">0</div>
+        <div class="stat-lbl">Rounds Done</div>
+      </div>
+      <div class="stat-box">
+        <img src="correct.png" alt="correct">
+        <div class="stat-val" id="finalCorrect">0</div>
+        <div class="stat-lbl">Correct Bonds</div>
+      </div>
+      <div class="stat-box">
+        <img src="wrong.png" alt="wrong">
+        <div class="stat-val" id="finalWrong">0</div>
+        <div class="stat-lbl">Wrong Bonds</div>
+      </div>
+    </div>
+    <div class="end-btns">
+      <button class="btn btn-gold"      onclick="startGame()">🔄 &nbsp;Play Again</button>
+      <button class="btn btn-secondary" onclick="backToStart()">🏠 &nbsp;Main Menu</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   AUDIO ENGINE
+═══════════════════════════════════════════════════════════ */
+let audioCtx      = null;
+let musicGain     = null;
+let musicPlaying  = false;
+let muted         = false;
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function playTone(freq, type, duration, vol=0.3, delay=0, pan=0) {
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const panner = ctx.createStereoPanner();
+    osc.connect(gain); gain.connect(panner); panner.connect(ctx.destination);
+    osc.type = type; osc.frequency.value = freq; panner.pan.value = pan;
+    const t = ctx.currentTime + delay;
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(vol, t + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+    osc.start(t); osc.stop(t + duration + 0.05);
+  } catch(e) {}
+}
+
+function sfxAtomSelect()      { if(muted)return; playTone(880,'sine',0.06,0.25); playTone(1100,'sine',0.05,0.1,0.03); }
+function sfxDragStart()       { if(muted)return; playTone(440,'triangle',0.08,0.15,0,-0.3); }
+function sfxBondCreated()     { if(muted)return; playTone(660,'sine',0.12,0.3); playTone(990,'sine',0.08,0.2,0.06); }
+function sfxBondCorrect()     { if(muted)return; playTone(880,'sine',0.15,0.3,0,0.3); playTone(1108,'sine',0.12,0.25,0.06,0.3); playTone(1320,'sine',0.1,0.2,0.12,0.3); }
+function sfxBondWrong()       { if(muted)return; playTone(180,'sawtooth',0.12,0.3); playTone(160,'sawtooth',0.1,0.25,0.08); }
+function sfxMoleculeComplete(){ if(muted)return; [523,659,784,1047].forEach((f,i)=>playTone(f,'sine',0.25,0.35,i*0.1)); }
+function sfxLifeLost()        { if(muted)return; playTone(200,'sawtooth',0.3,0.35); playTone(150,'sawtooth',0.25,0.3,0.15); playTone(100,'sawtooth',0.2,0.2,0.3); }
+function sfxRoundComplete()   { if(muted)return; playTone(784,'sine',0.15,0.3); playTone(1047,'sine',0.2,0.35,0.1); }
+function sfxGameOver()        { if(muted)return; [400,330,260,200].forEach((f,i)=>playTone(f,'sine',0.3,0.3,i*0.15)); }
+function sfxVictory()         { if(muted)return; [523,659,784,1047,1319,1568].forEach((f,i)=>playTone(f,'sine',0.35,0.4,i*0.1)); }
+
+/* Background music */
+const MELODY = [
+  {f:523,d:0.4},{f:587,d:0.2},{f:659,d:0.4},{f:587,d:0.2},
+  {f:784,d:0.6},{f:0,d:0.2},{f:698,d:0.4},{f:659,d:0.4},
+  {f:587,d:0.6},{f:0,d:0.2},{f:523,d:0.4},{f:659,d:0.2},
+  {f:784,d:0.4},{f:880,d:0.2},{f:784,d:0.4},{f:698,d:0.6},
+  {f:659,d:0.4},{f:587,d:0.4},{f:523,d:0.8}
+];
+const CHORDS = [[261,330,392],[293,370,440],[261,330,392],[196,247,294]];
+
+function startBGMusic() {
+  if (musicPlaying || muted) return;
+  musicPlaying = true;
+  const ctx = getAudioCtx();
+  musicGain = ctx.createGain();
+  musicGain.gain.value = 0.45;
+  musicGain.connect(ctx.destination);
+  let noteIdx = 0, chordTick = 0, chordIdx = 0;
+
+  function tick() {
+    if (!musicPlaying) return;
+    const n = MELODY[noteIdx % MELODY.length];
+    noteIdx++; chordTick++;
+    if (n.f > 0) {
+      const osc = ctx.createOscillator(), g = ctx.createGain();
+      osc.connect(g); g.connect(musicGain);
+      osc.type = 'sine'; osc.frequency.value = n.f;
+      const t = ctx.currentTime;
+      g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.18,t+0.02);
+      g.gain.exponentialRampToValueAtTime(0.001,t+n.d*0.9);
+      osc.start(t); osc.stop(t+n.d);
+    }
+    if (chordTick % 4 === 0) {
+      const chord = CHORDS[chordIdx++ % CHORDS.length];
+      chord.forEach(freq => {
+        const osc = ctx.createOscillator(), g = ctx.createGain();
+        osc.connect(g); g.connect(musicGain);
+        osc.type = 'triangle'; osc.frequency.value = freq;
+        const t = ctx.currentTime;
+        g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.04,t+0.05);
+        g.gain.exponentialRampToValueAtTime(0.001,t+0.7);
+        osc.start(t); osc.stop(t+0.8);
+      });
+    }
+    setTimeout(tick, n.d * 1000);
+  }
+  tick();
+}
+
+function stopBGMusic() { musicPlaying = false; }
+
+function toggleMute() {
+  muted = !muted;
+  document.getElementById('muteBtn').textContent = muted ? '🔇' : '🔊';
+  if (muted) { if(musicGain) musicGain.gain.value=0; stopBGMusic(); }
+  else       { if(musicGain) musicGain.gain.value=0.45; startBGMusic(); }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ROUND DATA
+═══════════════════════════════════════════════════════════ */
+const ROUNDS = [
+  { name:'H₂',    hint:'Build Hydrogen Gas (H₂)',                    allowDouble:false, allowTriple:false,
+    atoms:[{el:'H',val:1,x:.35,y:.5},{el:'H',val:1,x:.65,y:.5}] },
+
+  { name:'H₂O',   hint:'Build Water (H₂O)',                          allowDouble:false, allowTriple:false,
+    atoms:[{el:'O',val:2,x:.5,y:.38},{el:'H',val:1,x:.3,y:.65},{el:'H',val:1,x:.7,y:.65}] },
+
+  { name:'NH₃',   hint:'Build Ammonia (NH₃)',                        allowDouble:false, allowTriple:false,
+    atoms:[{el:'N',val:3,x:.5,y:.35},{el:'H',val:1,x:.27,y:.62},{el:'H',val:1,x:.5,y:.72},{el:'H',val:1,x:.73,y:.62}] },
+
+  { name:'CH₄',   hint:'Build Methane (CH₄)',                        allowDouble:false, allowTriple:false,
+    atoms:[{el:'C',val:4,x:.5,y:.5},{el:'H',val:1,x:.5,y:.25},{el:'H',val:1,x:.75,y:.5},{el:'H',val:1,x:.5,y:.75},{el:'H',val:1,x:.25,y:.5}] },
+
+  { name:'CO₂',   hint:'Build Carbon Dioxide (CO₂) — double bonds!', allowDouble:true,  allowTriple:false,
+    atoms:[{el:'O',val:2,x:.2,y:.5,mbo:2},{el:'C',val:4,x:.5,y:.5,mbo:2},{el:'O',val:2,x:.8,y:.5,mbo:2}] },
+
+  { name:'C₂H₄',  hint:'Build Ethylene (C₂H₄) — C=C double bond!',  allowDouble:true,  allowTriple:false,
+    atoms:[{el:'C',val:4,x:.38,y:.5,mbo:2},{el:'C',val:4,x:.62,y:.5,mbo:2},
+           {el:'H',val:1,x:.2,y:.3},{el:'H',val:1,x:.2,y:.7},{el:'H',val:1,x:.8,y:.3},{el:'H',val:1,x:.8,y:.7}] },
+
+  { name:'N₂',    hint:'Build Nitrogen Gas (N₂) — triple bond!',     allowDouble:true,  allowTriple:true,
+    atoms:[{el:'N',val:3,x:.35,y:.5,mbo:3},{el:'N',val:3,x:.65,y:.5,mbo:3}] },
+
+  { name:'C₂H₂',  hint:'Build Acetylene (C₂H₂) — C≡C triple bond!', allowDouble:true,  allowTriple:true,
+    atoms:[{el:'H',val:1,x:.15,y:.5},{el:'C',val:4,x:.38,y:.5,mbo:3},{el:'C',val:4,x:.62,y:.5,mbo:3},{el:'H',val:1,x:.85,y:.5}] },
+
+  { name:'H₂CO',  hint:'Build Formaldehyde (H₂CO) — C=O bond!',     allowDouble:true,  allowTriple:false,
+    atoms:[{el:'C',val:4,x:.5,y:.45,mbo:2},{el:'O',val:2,x:.75,y:.45,mbo:2},{el:'H',val:1,x:.3,y:.27},{el:'H',val:1,x:.3,y:.63}] },
+
+  { name:'C₂H₅OH',hint:'Build Ethanol (C₂H₅OH) — organic molecule!', allowDouble:false, allowTriple:false,
+    atoms:[{el:'C',val:4,x:.28,y:.45},{el:'C',val:4,x:.50,y:.45},{el:'O',val:2,x:.70,y:.45},
+           {el:'H',val:1,x:.13,y:.3},{el:'H',val:1,x:.13,y:.6},{el:'H',val:1,x:.28,y:.7},
+           {el:'H',val:1,x:.50,y:.7},{el:'H',val:1,x:.50,y:.25},{el:'H',val:1,x:.85,y:.45}] },
+];
+
+/* ═══════════════════════════════════════════════════════════
+   ELEMENT CONFIG
+═══════════════════════════════════════════════════════════ */
+const ELEM = {
+  H:  { color:'#d8d8d8', glow:'#ffffff', r:22, ve:1 },
+  O:  { color:'#cc2828', glow:'#ff6b6b', r:28, ve:6 },
+  N:  { color:'#2860d8', glow:'#6baeff', r:28, ve:5 },
+  C:  { color:'#777777', glow:'#bbbbbb', r:28, ve:4 },
+  Cl: { color:'#23a85a', glow:'#5dde5d', r:28, ve:7 },
+  F:  { color:'#1e9b4f', glow:'#3dff8f', r:24, ve:7 },
+  S:  { color:'#d4b020', glow:'#ffd700', r:28, ve:6 },
+  P:  { color:'#8844aa', glow:'#c98fff', r:28, ve:5 },
+};
+
+/* ═══════════════════════════════════════════════════════════
+   GAME STATE
+═══════════════════════════════════════════════════════════ */
+const state = {
+  active: false,          // true only while game screen is live
+  round: 0,
+  score: 0,
+  lives: 3,
+  timer: 20,
+  timerID: null,
+  atoms: [],              // { el, valence, mbo, x, y }
+  bonds: [],              // { a1, a2, order }
+  selectedAtom: null,     // index | null
+  selectedBond: null,     // index | null
+  dragging: false,
+  dragFrom: null,         // index | null
+  dragX: 0, dragY: 0,
+  roundDone: false,
+  totalCorrect: 0,
+  totalWrong: 0,
+  roundsDone: 0,
+};
+
+/* ═══════════════════════════════════════════════════════════
+   CANVAS
+═══════════════════════════════════════════════════════════ */
+const canvas = document.getElementById('gameCanvas');
+const ctx    = canvas.getContext('2d');
+let animID   = null;
+let cW = 0, cH = 0;
+
+function resizeCanvas() {
+  if (!state.active) return;
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return;
+  canvas.width  = rect.width  * window.devicePixelRatio;
+  canvas.height = rect.height * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  cW = rect.width;
+  cH = rect.height;
+  layoutAtoms();
+}
+
+window.addEventListener('resize', () => { if (state.active) { resizeCanvas(); } });
+
+function layoutAtoms() {
+  if (!cW || !cH) return;
+  const rd = ROUNDS[state.round];
+  state.atoms.forEach((a, i) => {
+    const tmpl = rd.atoms[i];
+    if (!tmpl) return;
+    a.x = tmpl.x * cW;
+    a.y = tmpl.y * cH;
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RENDER
+═══════════════════════════════════════════════════════════ */
+function drawFrame() {
+  ctx.clearRect(0, 0, cW, cH);
+  if (!state.active || !state.atoms.length) return;
+  renderBonds();
+  renderDragLine();
+  renderAtoms();
+}
+
+function renderBonds() {
+  state.bonds.forEach((b, bi) => {
+    // ── CRITICAL GUARD: skip if either atom is missing ──
+    const a1 = state.atoms[b.a1];
+    const a2 = state.atoms[b.a2];
+    if (!a1 || !a2 || a1.x === undefined || a2.x === undefined) return;
+
+    const dx = a2.x - a1.x, dy = a2.y - a1.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist === 0) return;
+    const nx = -dy / dist, ny = dx / dist;
+
+    const sel     = (state.selectedBond === bi);
+    const order   = b.order || 1;
+    const offsets = order === 1 ? [0] : order === 2 ? [-4, 4] : [-6, 0, 6];
+
+    offsets.forEach(off => {
+      ctx.beginPath();
+      ctx.moveTo(a1.x + nx*off, a1.y + ny*off);
+      ctx.lineTo(a2.x + nx*off, a2.y + ny*off);
+      ctx.strokeStyle = sel ? '#ffd700' : 'rgba(0,229,255,0.85)';
+      ctx.lineWidth   = sel ? 3.5 : 2.5;
+      ctx.shadowColor = sel ? '#ffd700' : '#00e5ff';
+      ctx.shadowBlur  = sel ? 12 : 8;
+      ctx.stroke();
+      ctx.shadowBlur  = 0;
+    });
+
+    if (order > 1) {
+      const mx = (a1.x+a2.x)/2, my = (a1.y+a2.y)/2;
+      ctx.fillStyle = '#00e5ff';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(order === 2 ? '=' : '≡', mx, my - 8);
+    }
+  });
+}
+
+function renderDragLine() {
+  if (!state.dragging || state.dragFrom === null) return;
+  const a = state.atoms[state.dragFrom];
+  if (!a || a.x === undefined) return;   // ── GUARD ──
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(state.dragX, state.dragY);
+  ctx.strokeStyle = 'rgba(0,229,255,0.5)';
+  ctx.lineWidth   = 2;
+  ctx.setLineDash([6, 4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function renderAtoms() {
+  state.atoms.forEach((a, i) => {
+    if (a.x === undefined || a.y === undefined) return; // ── GUARD ──
+    const cfg = ELEM[a.el] || ELEM.H;
+    const r   = cfg.r;
+    const bonded = bondsFor(i);
+    const sat  = bonded === a.valence;
+    const over = bonded >  a.valence;
+    const isSel   = state.selectedAtom === i;
+    const isDrag  = state.dragFrom === i && state.dragging;
+    const isHover = state.dragging && state.dragFrom !== i && canBond(state.dragFrom, i);
+
+    // Glow ring
+    if (sat) {
+      ctx.beginPath(); ctx.arc(a.x,a.y,r+7,0,Math.PI*2);
+      ctx.fillStyle='rgba(0,255,136,0.18)'; ctx.fill();
+      ctx.beginPath(); ctx.arc(a.x,a.y,r+5,0,Math.PI*2);
+      ctx.strokeStyle='rgba(0,255,136,0.85)'; ctx.lineWidth=2.5;
+      ctx.shadowColor='#00ff88'; ctx.shadowBlur=14; ctx.stroke(); ctx.shadowBlur=0;
+    } else if (over) {
+      ctx.beginPath(); ctx.arc(a.x,a.y,r+6,0,Math.PI*2);
+      ctx.strokeStyle='rgba(255,59,59,0.8)'; ctx.lineWidth=2.5;
+      ctx.shadowColor='#ff3b3b'; ctx.shadowBlur=10; ctx.stroke(); ctx.shadowBlur=0;
+    } else if (isSel || isDrag) {
+      ctx.beginPath(); ctx.arc(a.x,a.y,r+8,0,Math.PI*2);
+      ctx.strokeStyle='rgba(255,215,0,0.9)'; ctx.lineWidth=3;
+      ctx.shadowColor='#ffd700'; ctx.shadowBlur=16; ctx.stroke(); ctx.shadowBlur=0;
+    } else if (isHover) {
+      ctx.beginPath(); ctx.arc(a.x,a.y,r+6,0,Math.PI*2);
+      ctx.strokeStyle='rgba(0,229,255,0.8)'; ctx.lineWidth=2.5;
+      ctx.shadowColor='#00e5ff'; ctx.shadowBlur=12; ctx.stroke(); ctx.shadowBlur=0;
+    }
+
+    // 3D sphere
+    const grd = ctx.createRadialGradient(a.x-r*.3, a.y-r*.3, r*.05, a.x, a.y, r);
+    grd.addColorStop(0, lighten(cfg.color, 60));
+    grd.addColorStop(0.45, cfg.color);
+    grd.addColorStop(1, darken(cfg.color, 50));
+    ctx.beginPath(); ctx.arc(a.x,a.y,r,0,Math.PI*2);
+    ctx.fillStyle=grd; ctx.shadowColor=cfg.glow; ctx.shadowBlur=12; ctx.fill(); ctx.shadowBlur=0;
+
+    // Symbol
+    ctx.fillStyle = (a.el==='H'||a.el==='S') ? '#222' : '#fff';
+    ctx.font = `bold ${Math.max(11, r*.65)}px sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(a.el, a.x, a.y);
+
+    // Bond count badge
+    ctx.font = `bold ${Math.max(9, r*.42)}px sans-serif`;
+    ctx.fillStyle = sat ? '#00ff88' : over ? '#ff3b3b' : '#ffd700';
+    ctx.fillText(`${bonded}/${a.valence}`, a.x, a.y + r + 12);
+
+    // Lone pairs
+    renderLonePairs(a, i, bonded, cfg, r);
+  });
+}
+
+function renderLonePairs(a, i, bonds, cfg, r) {
+  const loneE = Math.max(0, cfg.ve - bonds * 2);
+  const pairs = Math.floor(loneE / 2);
+  if (pairs <= 0) return;
+
+  // Angles occupied by existing bonds
+  const usedAngles = state.bonds
+    .filter(b => b.a1===i || b.a2===i)
+    .map(b => {
+      const other = b.a1===i ? b.a2 : b.a1;
+      const oa = state.atoms[other];
+      // ── GUARD: skip if partner atom missing ──
+      if (!oa || oa.x === undefined) return null;
+      return Math.atan2(oa.y - a.y, oa.x - a.x);
+    })
+    .filter(v => v !== null);
+
+  const angles = [Math.PI/2, -Math.PI/2, Math.PI, 0];
+  let painted = 0;
+  for (const ang of angles) {
+    if (painted >= pairs) break;
+    if (usedAngles.some(u => Math.abs(u - ang) < 0.6)) continue;
+    const dx = Math.cos(ang) * (r+18), dy = Math.sin(ang) * (r+18);
+    ctx.fillStyle = 'rgba(180,220,255,0.8)';
+    ctx.beginPath(); ctx.arc(a.x+dx-3, a.y+dy, 2.5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(a.x+dx+3, a.y+dy, 2.5, 0, Math.PI*2); ctx.fill();
+    painted++;
+  }
+}
+
+function lighten(hex, amt) {
+  const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+  return `rgb(${Math.min(255,r+amt)},${Math.min(255,g+amt)},${Math.min(255,b+amt)})`;
+}
+function darken(hex, amt) {
+  const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+  return `rgb(${Math.max(0,r-amt)},${Math.max(0,g-amt)},${Math.max(0,b-amt)})`;
+}
+
+function animLoop() {
+  drawFrame();
+  animID = requestAnimationFrame(animLoop);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SCREEN NAV
+═══════════════════════════════════════════════════════════ */
+function showScreen(id) {
+  ['startScreen','instructScreen','gameScreen','endScreen'].forEach(s => {
+    document.getElementById(s).className = 'screen' + (s===id ? ' show' : ' hidden');
+  });
+}
+function showInstructions() { showScreen('instructScreen'); }
+function backToStart()      { stopGame(); showScreen('startScreen'); }
+
+/* ═══════════════════════════════════════════════════════════
+   GAME FLOW
+═══════════════════════════════════════════════════════════ */
+function startGame() {
+  state.round        = 0;
+  state.score        = 0;
+  state.lives        = 3;
+  state.timer        = 20;
+  state.totalCorrect = 0;
+  state.totalWrong   = 0;
+  state.roundsDone   = 0;
+  state.active       = true;
+
+  showScreen('gameScreen');
+
+  // Wait for layout then boot
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      resizeCanvas();
+      loadRound(0);
+      buildLivesHUD();
+      if (!musicPlaying && !muted) startBGMusic();
+      if (animID) cancelAnimationFrame(animID);
+      animLoop();
+    });
+  });
+}
+
+function stopGame() {
+  state.active = false;
+  if (animID) { cancelAnimationFrame(animID); animID = null; }
+  clearInterval(state.timerID); state.timerID = null;
+  stopBGMusic();
+  // Clear drag state so no stale indices survive
+  state.dragging    = false;
+  state.dragFrom    = null;
+  state.selectedAtom= null;
+  state.selectedBond= null;
+}
+
+function buildLivesHUD() {
+  const wrap = document.getElementById('livesWrap');
+  wrap.innerHTML = '';
+  for (let i = 0; i < 3; i++) {
+    const img = document.createElement('img');
+    img.src = 'heart.png'; img.alt = 'life';
+    img.className = 'life-icon'; img.id = `life${i}`;
+    if (i >= state.lives) img.classList.add('lost');
+    wrap.appendChild(img);
+  }
+}
+
+function updateLivesHUD() {
+  for (let i = 0; i < 3; i++) {
+    const el = document.getElementById(`life${i}`);
+    if (el) el.classList.toggle('lost', i >= state.lives);
+  }
+}
+
+function loadRound(r) {
+  clearInterval(state.timerID);
+
+  // ── Reset interaction state FIRST so no stale indices ──
+  state.dragging     = false;
+  state.dragFrom     = null;
+  state.selectedAtom = null;
+  state.selectedBond = null;
+  state.roundDone    = false;
+  state.round        = r;
+
+  const rd = ROUNDS[r];
+
+  // Build fresh atoms — x/y set to 0 until layoutAtoms runs
+  state.atoms = rd.atoms.map(t => ({
+    el:      t.el,
+    valence: t.val,
+    mbo:     t.mbo || 1,
+    x: 0, y: 0,
+  }));
+  state.bonds = [];   // clear bonds AFTER atoms are set
+
+  layoutAtoms();
+
+  // HUD
+  document.getElementById('hudRound').textContent = r + 1;
+  document.getElementById('hudScore').textContent  = state.score;
+  document.getElementById('molHint').textContent   = rd.hint;
+  updateBondCounter();
+
+  // Timer
+  state.timer = 20;
+  updateTimerHUD();
+  state.timerID = setInterval(tickTimer, 1000);
+
+  showRoundNotif(r === 0 ? 'Round 1 — GO!' : 'New Molecule!');
+}
+
+function tickTimer() {
+  if (state.roundDone || !state.active) return;
+  state.timer--;
+  updateTimerHUD();
+  if (state.timer <= 0) {
+    clearInterval(state.timerID);
+    showRoundNotif('⏰ Time Up!');
+    setTimeout(() => { if (state.active) advanceRound(); }, 1200);
+  }
+}
+
+function updateTimerHUD() {
+  document.getElementById('hudTimer').textContent = state.timer;
+  const pct = (state.timer / 20) * 100;
+  const bar = document.getElementById('timerBar');
+  bar.style.width = pct + '%';
+  bar.className = 'timer-bar' + (pct < 25 ? ' danger' : pct < 50 ? ' warn' : '');
+}
+
+function updateBondCounter() {
+  const made   = state.bonds.reduce((s,b) => s + (b.order||1), 0);
+  const needed = state.atoms.reduce((s,a) => s + a.valence, 0) / 2;
+  document.getElementById('bondsMade').textContent   = made;
+  document.getElementById('bondsNeeded').textContent = Math.round(needed);
+}
+
+function showRoundNotif(msg) {
+  const el = document.getElementById('roundNotif');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 1800);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BONDING LOGIC
+═══════════════════════════════════════════════════════════ */
+function bondsFor(idx) {
+  return state.bonds
+    .filter(b => b.a1===idx || b.a2===idx)
+    .reduce((s, b) => s + (b.order||1), 0);
+}
+
+function canBond(ai, bi) {
+  if (ai === null || bi === null || ai === bi) return false;
+  // ── GUARD: atoms must exist ──
+  const atomA = state.atoms[ai], atomB = state.atoms[bi];
+  if (!atomA || !atomB) return false;
+
+  const rd       = ROUNDS[state.round];
+  const maxOrder = rd.allowTriple ? 3 : rd.allowDouble ? 2 : 1;
+  const ex       = state.bonds.find(b => (b.a1===ai&&b.a2===bi)||(b.a1===bi&&b.a2===ai));
+
+  if (ex && (ex.order||1) >= Math.min(atomA.mbo, atomB.mbo, maxOrder)) return false;
+  if (bondsFor(ai) >= atomA.valence) return false;
+  if (bondsFor(bi) >= atomB.valence) return false;
+  return true;
+}
+
+function createBond(ai, bi) {
+  if (!state.active || state.roundDone) return;
+
+  // ── GUARD: validate indices ──
+  if (ai === null || bi === null || ai === bi) return;
+  if (!state.atoms[ai] || !state.atoms[bi])   return;
+
+  if (!canBond(ai, bi)) {
+    sfxBondWrong();
+    state.lives--;
+    state.totalWrong++;
+    updateLivesHUD();
+    shakeCanvas();
+    if (state.lives <= 0) {
+      clearInterval(state.timerID);
+      sfxGameOver();
+      setTimeout(() => endGame(false), 800);
+    } else {
+      sfxLifeLost();
+    }
+    return;
+  }
+
+  const ex = state.bonds.find(b => (b.a1===ai&&b.a2===bi)||(b.a1===bi&&b.a2===ai));
+  if (ex) { ex.order = (ex.order||1) + 1; }
+  else    { state.bonds.push({ a1:ai, a2:bi, order:1 }); }
+
+  sfxBondCreated();
+  state.totalCorrect++;
+  updateBondCounter();
+
+  const allSat = state.atoms.every((_, i) => bondsFor(i) === state.atoms[i].valence);
+  if (allSat) {
+    state.roundDone = true;
+    clearInterval(state.timerID);
+    state.score += 100 + Math.max(10, state.timer * 5);
+    document.getElementById('hudScore').textContent = state.score;
+    sfxMoleculeComplete();
+    spawnParticles(cW/2, cH/2, '#00ff88');
+    state.roundsDone++;
+    setTimeout(() => { sfxRoundComplete(); if (state.active) advanceRound(); }, 1400);
+  } else {
+    sfxBondCorrect();
+  }
+}
+
+function advanceRound() {
+  if (state.round + 1 >= ROUNDS.length) { endGame(true); return; }
+  loadRound(state.round + 1);
+}
+
+function removeBond(bi) {
+  if (bi < 0 || bi >= state.bonds.length) return;
+  const b = state.bonds[bi];
+  if ((b.order||1) > 1) { b.order--; }
+  else { state.bonds.splice(bi, 1); }
+  state.selectedBond = null;
+  updateBondCounter();
+}
+
+function resetRound() { if (state.active) loadRound(state.round); }
+
+/* ═══════════════════════════════════════════════════════════
+   PARTICLES & SHAKE
+═══════════════════════════════════════════════════════════ */
+function spawnParticles(x, y, color) {
+  const container = document.getElementById('particles');
+  for (let i = 0; i < 22; i++) {
+    const p   = document.createElement('div');
+    const sz  = 5 + Math.random() * 8;
+    const ang = Math.random() * Math.PI * 2;
+    const d   = 60 + Math.random() * 100;
+    p.className = 'particle';
+    p.style.cssText = `left:${x}px;top:${y}px;width:${sz}px;height:${sz}px;background:${color};--dx:${Math.cos(ang)*d}px;--dy:${Math.sin(ang)*d}px;animation-duration:${0.6+Math.random()*0.6}s`;
+    container.appendChild(p);
+    setTimeout(() => p.remove(), 1200);
+  }
+}
+
+function shakeCanvas() {
+  const shakes = [[6,0],[-6,2],[5,-3],[-4,1],[0,0]];
+  shakes.forEach(([x,y], i) => setTimeout(() => {
+    canvas.style.transform = `translate(${x}px,${y}px)`;
+    if (i === shakes.length-1) canvas.style.transform = '';
+  }, i * 50));
+}
+
+/* ═══════════════════════════════════════════════════════════
+   END GAME
+═══════════════════════════════════════════════════════════ */
+function endGame(victory) {
+  stopGame();
+  document.getElementById('finalScore').textContent   = state.score;
+  document.getElementById('finalRounds').textContent  = state.roundsDone;
+  document.getElementById('finalCorrect').textContent = state.totalCorrect;
+  document.getElementById('finalWrong').textContent   = state.totalWrong;
+  if (victory) {
+    document.getElementById('endIcon').textContent  = '🏆';
+    document.getElementById('endTitle').textContent = 'You Win!';
+    document.getElementById('endMsg').textContent   = 'Outstanding! You mastered all 10 molecules!';
+    sfxVictory();
+    setTimeout(() => spawnParticles(window.innerWidth/2, window.innerHeight/3, '#ffd700'), 200);
+    setTimeout(() => spawnParticles(window.innerWidth/3, window.innerHeight/2, '#00ff88'), 500);
+  } else {
+    document.getElementById('endIcon').textContent  = '💔';
+    document.getElementById('endTitle').textContent = 'Game Over';
+    document.getElementById('endMsg').textContent   = "Keep practising — you'll master covalent bonding!";
+    sfxGameOver();
+  }
+  showScreen('endScreen');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HIT TESTING
+═══════════════════════════════════════════════════════════ */
+function atomAt(x, y) {
+  for (let i = state.atoms.length-1; i >= 0; i--) {
+    const a = state.atoms[i];
+    if (!a || a.x === undefined) continue;  // ── GUARD ──
+    const cfg = ELEM[a.el] || ELEM.H;
+    if (Math.hypot(x-a.x, y-a.y) <= cfg.r + 10) return i;
+  }
+  return -1;
+}
+
+function bondAt(x, y) {
+  for (let i = 0; i < state.bonds.length; i++) {
+    const b  = state.bonds[i];
+    const a1 = state.atoms[b.a1], a2 = state.atoms[b.a2];
+    if (!a1 || !a2 || a1.x===undefined || a2.x===undefined) continue; // ── GUARD ──
+    const dist = pointLineDist(x,y, a1.x,a1.y, a2.x,a2.y);
+    const len  = Math.hypot(a2.x-a1.x, a2.y-a1.y);
+    if (len === 0) continue;
+    const t = ((x-a1.x)*(a2.x-a1.x)+(y-a1.y)*(a2.y-a1.y))/(len*len);
+    if (dist < 12 && t >= 0 && t <= 1) return i;
+  }
+  return -1;
+}
+
+function pointLineDist(px,py,x1,y1,x2,y2) {
+  const num = Math.abs((y2-y1)*px - (x2-x1)*py + x2*y1 - y2*x1);
+  const den = Math.hypot(y2-y1, x2-x1);
+  return den === 0 ? Infinity : num/den;
+}
+
+function getPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const src  = e.changedTouches ? e.changedTouches[0] : e;
+  return { x: src.clientX - rect.left, y: src.clientY - rect.top };
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MOUSE EVENTS
+═══════════════════════════════════════════════════════════ */
+canvas.addEventListener('mousedown', e => {
+  if (!state.active || state.roundDone) return;
+  const pos = getPos(e);
+  const ai  = atomAt(pos.x, pos.y);
+
+  if (ai >= 0) {
+    if (state.selectedAtom === null) {
+      // Start drag
+      state.selectedAtom = ai;
+      state.dragging     = true;
+      state.dragFrom     = ai;
+      state.dragX = pos.x; state.dragY = pos.y;
+      sfxAtomSelect(); sfxDragStart();
+    } else {
+      // Complete bond
+      const from = state.selectedAtom;
+      state.selectedAtom = null;
+      state.dragging     = false;
+      state.dragFrom     = null;
+      if (from !== ai) createBond(from, ai);
+    }
+    state.selectedBond = null;
+  } else {
+    const bi = bondAt(pos.x, pos.y);
+    if (bi >= 0) {
+      state.selectedBond = bi;
+      state.selectedAtom = null;
+      state.dragging     = false;
+      state.dragFrom     = null;
+    } else {
+      state.selectedAtom = null;
+      state.selectedBond = null;
+      state.dragging     = false;
+      state.dragFrom     = null;
+    }
+  }
+});
+
+canvas.addEventListener('mousemove', e => {
+  if (!state.dragging) return;
+  const pos = getPos(e);
+  state.dragX = pos.x; state.dragY = pos.y;
+});
+
+canvas.addEventListener('mouseup', e => {
+  if (!state.dragging) return;
+  const pos  = getPos(e);
+  const ai   = atomAt(pos.x, pos.y);
+  const from = state.dragFrom;
+  state.dragging = false; state.dragFrom = null; state.selectedAtom = null;
+  if (ai >= 0 && ai !== from) createBond(from, ai);
+});
+
+/* ═══════════════════════════════════════════════════════════
+   TOUCH EVENTS
+═══════════════════════════════════════════════════════════ */
+let lastTapTime = 0, lastTapBond = -1;
+
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (!state.active || state.roundDone) return;
+  const pos = getPos(e);
+  const ai  = atomAt(pos.x, pos.y);
+  if (ai >= 0) {
+    state.dragging = true; state.dragFrom = ai;
+    state.dragX = pos.x; state.dragY = pos.y;
+    state.selectedAtom = null; state.selectedBond = null;
+    sfxAtomSelect(); sfxDragStart();
+  } else {
+    const bi  = bondAt(pos.x, pos.y);
+    const now = Date.now();
+    if (bi >= 0 && bi === lastTapBond && now - lastTapTime < 350) {
+      removeBond(bi); lastTapBond = -1;
+    } else { lastTapBond = bi; lastTapTime = now; }
+    state.dragging = false; state.dragFrom = null;
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (!state.dragging) return;
+  const pos = getPos(e);
+  state.dragX = pos.x; state.dragY = pos.y;
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  if (!state.dragging) return;
+  const pos  = getPos(e);
+  const ai   = atomAt(pos.x, pos.y);
+  const from = state.dragFrom;
+  state.dragging = false; state.dragFrom = null;
+  if (ai >= 0 && ai !== from) createBond(from, ai);
+}, { passive: false });
+
+/* ═══════════════════════════════════════════════════════════
+   KEYBOARD
+═══════════════════════════════════════════════════════════ */
+document.addEventListener('keydown', e => {
+  if (!state.active) return;
+  switch (e.key) {
+    case 'Delete': case 'Backspace':
+      if (state.selectedBond !== null) { e.preventDefault(); removeBond(state.selectedBond); }
+      break;
+    case 'r': case 'R': resetRound(); break;
+    case 'm': case 'M': toggleMute(); break;
+    case 'Escape':
+      state.selectedAtom = null; state.dragging = false; state.dragFrom = null;
+      break;
+  }
+});
+
+/* Boot audio on first gesture */
+document.addEventListener('click',      () => { try { getAudioCtx(); } catch(e){} }, { once: true });
+document.addEventListener('touchstart', () => { try { getAudioCtx(); } catch(e){} }, { once: true });
+</script>
+</body>
+</html>
